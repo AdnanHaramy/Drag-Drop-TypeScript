@@ -20,10 +20,40 @@ class ProjectInput {
         this.renderElement()
 
     }
+    // a method that validates user input and checks it 
+    private gatherUserInput() : [string,string,number] | void {
+        const enteredTitle = this.titelInputElement.value;
+        const enteredDescription = this.descriptionlInputElement.value;
+        const enteredPeople = this.peopleInputElement.value;
+        if(enteredTitle.trim().length === 0 || 
+        enteredDescription.trim().length === 0 || 
+        enteredPeople.trim().length ===0 ) {
+            alert('invalid input please try again ')
+            return;
+        }
+        else {
+            return [enteredTitle,enteredDescription,parseFloat(enteredPeople)];
+        }
+    }
+    // a method to clear the form after checking if it is validatable 
+    private clearInputs() {
+        this.titelInputElement.value = '';
+        this.descriptionlInputElement.value = '';
+        this.peopleInputElement.value = '';
+
+    }
+
     private sumbitHandler (event : Event) 
     {
         // the default behavior is to send an http request
         event.preventDefault();
+        const userInput = this.gatherUserInput();
+        if (Array.isArray(userInput)){
+            const [title,desc,people] = userInput;
+            console.log(title,desc,people);
+            this.clearInputs()
+        }
+
     }
 
     private configure () {

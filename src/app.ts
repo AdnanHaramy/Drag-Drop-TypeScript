@@ -1,3 +1,39 @@
+// Project State Management 
+class ProjectState { 
+    private listeners : any [] = [];
+    private projects : any[] =[];
+    private static instance : ProjectState;
+    private constructor() {
+
+    }
+    static getInstance() {
+        if(this.instance){
+            return this.instance
+        }
+        this.instance = new ProjectState();
+        return this.instance;
+    }
+    addListener(listenerFn : Function) {
+        this.listeners.push(listenerFn);
+    }
+    addProject( title: string , description :string , numOfPeople : number ) {
+        const newProject = {
+            id : Math.random(),
+            title : title,
+            description : description ,
+            people :numOfPeople,
+        };
+        this.projects.push(newProject);
+        for(const listenerFn of this.listeners) {
+            listenerFn(this.projects.slice());
+        }
+    }
+}
+
+const projectstate = ProjectState.getInstance();
+
+
+
 // Reusable Validation Logic 
 // required and minLength and maxLength and min and max should be optional
 interface Validatable {
@@ -30,6 +66,34 @@ function validate(validatableInput : Validatable) {
     return isValid;
 }
 
+// ProjectList Class
+class ProjectList {
+    templateElement : HTMLTemplateElement;
+    hostElement : HTMLDivElement;
+    element : HTMLElement;
+    // because we set the type inside of the constructor every project list should be either active or inactive (finished)
+    constructor (private type : 'active' | 'finished') {
+            // Access to the elements inside the DOM
+            this.templateElement = document.getElementById('project-list')! as HTMLTemplateElement;
+            this.hostElement = document.getElementById('app')! as HTMLDivElement;
+            const importedNode = document.importNode(this.templateElement.content,true);
+            this.element = importedNode.firstElementChild as HTMLElement ;
+            this.element.id = `${this.type}-projects`;
+            this.attach()
+            this.renderContent()
+    }
+    private renderContent () {
+        const listId = `${this.type}-projects-list`
+        this.element.querySelector('ul')!.id = listId;
+        this.element.querySelector('h2')!.textContent = this.type.toUpperCase() + ' PROJECTS';
+    }
+    private attach () {
+        this.hostElement.insertAdjacentElement('beforeend',this.element );
+
+    }
+}
+
+
 class ProjectInput {
     // properties and thier types
     templateElement : HTMLTemplateElement;
@@ -49,7 +113,7 @@ class ProjectInput {
         this.descriptionlInputElement = this.element.querySelector('#description') as HTMLInputElement;
         this.peopleInputElement = this.element.querySelector('#people') as HTMLInputElement;
         this.configure();
-        this.renderElement()
+        this.attach()
 
     }
     // a method that validates user input and checks it 
@@ -102,7 +166,7 @@ class ProjectInput {
         const userInput = this.gatherUserInput();
         if (Array.isArray(userInput)){
             const [title,desc,people] = userInput;
-            console.log(title,desc,people);
+            projectstate.addProject(title,desc,people);
             this.clearInputs()
         }
 
@@ -111,9 +175,11 @@ class ProjectInput {
     private configure () {
         this.element.addEventListener('submit', this.sumbitHandler.bind(this));
     }
-    private renderElement() {
+    private attach() {
         // method that insert's an html element 
         this.hostElement.insertAdjacentElement('afterbegin',this.element );
     }
 }
 const projectinput = new ProjectInput ();
+const activeproject = new ProjectList('active');
+const finishedproject = new ProjectList('finished');

@@ -1,7 +1,21 @@
+// Project Type
+enum ProjectStatus {
+    Active, Finished
+}
+class Project {
+    constructor(
+        public id : string,
+        public title : string,
+        public description : string,
+        public people : number,
+        public status : ProjectStatus,
+    ) {}
+}
+type Listener = (items : Project[]) => void;
 // Project State Management 
 class ProjectState { 
-    private listeners : any [] = [];
-    private projects : any[] =[];
+    private listeners : Listener [] = [];
+    private projects : Project[] =[];
     private static instance : ProjectState;
     private constructor() {
 
@@ -13,16 +27,12 @@ class ProjectState {
         this.instance = new ProjectState();
         return this.instance;
     }
-    addListener(listenerFn : Function) {
+    addListener(listenerFn : Listener) {
         this.listeners.push(listenerFn);
     }
     addProject( title: string , description :string , numOfPeople : number ) {
-        const newProject = {
-            id : Math.random(),
-            title : title,
-            description : description ,
-            people :numOfPeople,
-        };
+        // every project by default should be in an active status
+        const newProject = new Project(Math.random().toString(),title,description,numOfPeople, ProjectStatus.Active);
         this.projects.push(newProject);
         for(const listenerFn of this.listeners) {
             listenerFn(this.projects.slice());
@@ -66,11 +76,40 @@ function validate(validatableInput : Validatable) {
     return isValid;
 }
 
+// Component Base Class to make the code more reusable 
+class Component <T extends HTMLElement , U extends HTMLElement> {
+    templateElement : HTMLTemplateElement;
+    hostElement : T;
+    element : U;
+    constructor (
+        templateId : string ,
+        hostElementId : string ,
+        insertAtStart : boolean,
+        newElementId ?: string,
+    ) {
+        this.templateElement = document.getElementById(templateId)! as HTMLTemplateElement;
+        this.hostElement = document.getElementById(hostElementId)! as T;
+        const importedNode = document.importNode(this.templateElement.content,true);
+            this.element = importedNode.firstElementChild as U ;
+            if(newElementId) {
+                this.element.id = newElementId;
+            }    
+        this.attach()
+    }
+    private attach () {
+        this.hostElement.insertAdjacentElement('beforeend',this.element );
+
+    }
+}
+
+
+
 // ProjectList Class
 class ProjectList {
     templateElement : HTMLTemplateElement;
     hostElement : HTMLDivElement;
     element : HTMLElement;
+    assignedProjects : Project[];
     // because we set the type inside of the constructor every project list should be either active or inactive (finished)
     constructor (private type : 'active' | 'finished') {
             // Access to the elements inside the DOM
@@ -78,9 +117,30 @@ class ProjectList {
             this.hostElement = document.getElementById('app')! as HTMLDivElement;
             const importedNode = document.importNode(this.templateElement.content,true);
             this.element = importedNode.firstElementChild as HTMLElement ;
+            this.assignedProjects = [];
             this.element.id = `${this.type}-projects`;
+            projectstate.addListener( (projects : Project[])=> {
+                const relevantProjects = projects.filter(project => {
+                    if(this.type === 'active') {
+                        return project.status === ProjectStatus.Active;
+                    }
+                    return project.status === ProjectStatus.Finished;
+
+                })
+                this.assignedProjects = relevantProjects;
+                this.renderProjects();
+            });
             this.attach()
             this.renderContent()
+    }
+    private renderProjects() {
+        const listElement = document.getElementById(`${this.type}-projects-list`)! as HTMLUListElement;
+        listElement.innerHTML = '';
+        for (const projectItem of this.assignedProjects) {
+            const listItem = document.createElement('li');
+            listItem.textContent = projectItem.title;
+            listElement.appendChild(listItem);
+        }
     }
     private renderContent () {
         const listId = `${this.type}-projects-list`
